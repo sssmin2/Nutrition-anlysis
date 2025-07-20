@@ -1,0 +1,2 @@
+SQLALCHEMY_DATABASE_URI = 'mysql+pymsql://root:00000000@localhost:3306/nutrition'
+SQLALCHEMY_TRACK_MODIFICATIONS = False
