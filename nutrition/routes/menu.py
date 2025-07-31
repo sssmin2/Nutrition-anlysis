@@ -24,7 +24,7 @@ def create_menu():
     if not name or not isinstance(name, str) or len(name) > 30:
         return jsonify({'error': '메뉴명은 최대 30자의 문자열이어야 합니다.'}), 400
 
-    if not re.fullmatch(r'[가-힣a-zA-Z0-9 ]+', name):
+    if not re.fullmatch(r'[가-힣a-zA-Z0-9\s]+', name):
         return jsonify({'error': '메뉴명은 한글, 영문, 숫자, 공백만 포함해야 합니다.'}), 400
 
     if not isinstance(price, int) or not (500 <= price <= 50000):
@@ -132,13 +132,59 @@ def analyze_menu(menu_id):
 
 # 강조 조건 판단
 @menu_bp.route('/emphasis/<int:menu_id>', methods=['GET'])
-def check_emphasis(menu_id):
-    # 추후: 기준 충족 여부 판단 로직
-    return jsonify({'message': '강조 조건 판단 기능 준비 중'})
+def get_menu_emphasis(menu_id):
+    # 메뉴 조회 및 재료 조인
+    menu = Menu.query.options(joinedload(Menu.ingredients)).filter_by(id=menu_id).first()
+    if not menu:
+        return jsonify({'error': 'Menu not found'}), 404
+
+    # 영양 정보 계산
+    nutrition_summary = calculate_nutrition(menu)
+
+    # 강조 조건 판단
+    emphasis_result = check_emphasis(nutrition_summary)
+
+    return jsonify({
+        'menu_id': menu.id,
+        'menu_name': menu.name,
+        'emphasis': emphasis_result
+    })
+
 
 
 # AI 코멘트 생성
 @menu_bp.route('/comment/<int:menu_id>', methods=['GET'])
-def generate_comment(menu_id):
-    # 추후: AI 기반 코멘트 생성 로직
-    return jsonify({'message': 'AI 코멘트 생성 기능 준비 중'})
+def get_menu_comment(menu_id):
+
+    # 메뉴 + 재료 로딩
+    menu = Menu.query.options(joinedload(Menu.ingredients)).filter_by(id=menu_id).first()
+    if not menu:
+        return jsonify({'error': 'Menu not found'}), 404
+
+    # 영양성분 계산
+    nutrition = calculate_nutrition(menu)
+
+    # 원재료 이름 리스트 추출
+    ingredient_names = []
+    for ing in menu.ingredients:
+        food = RawFoodNutrition.query.get(ing.food_code)
+        if food:
+            ingredient_names.append(food.food_name or food.food_code)
+
+    # AI 코멘트 생성
+    try:
+        comment_raw = generate_comment(
+            menu_name=menu.name,
+            ingredients=ingredient_names,
+            nutrients=nutrition
+        )
+        comment = format_comment_by_sentence(comment_raw)
+
+    except Exception as e:
+        return jsonify({'error': f'AI 코멘트 생성 실패: {str(e)}'}), 500
+
+    return jsonify({
+        'menu_id': menu.id,
+        'menu_name': menu.name,
+        'comment': comment
+    })
