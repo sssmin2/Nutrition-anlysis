@@ -2,11 +2,14 @@ from flask import Blueprint, request, jsonify
 from db_model.menu import Menu
 from db_model.menu_ingredient import MenuIngredient
 from db_model.raw_food_nutrition import RawFoodNutrition
-from utils.nutrition_calculator import calculate_nutrition 
+from utils.nutrition_calculator import calculate_nutrition
+from utils.emphasis_rules import check_emphasis
+from utils.comment_generator import generate_comment, format_comment_by_sentence
 from utils import serialize_model
 from sqlalchemy.orm import joinedload
 from db_model import db
 import re
+import traceback
 
 menu_bp = Blueprint('menu', __name__, url_prefix='/menu')
 
@@ -63,6 +66,7 @@ def create_menu():
 
     except Exception as e:
         db.session.rollback()
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 # 메뉴 단건 조회
