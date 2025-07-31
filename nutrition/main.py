@@ -7,6 +7,7 @@ from routes.food import food_bp
 from routes.raw import raw_bp
 from routes.standard import standard_bp
 from routes.ingredients import ingredients_bp
+from routes.menu import menu_bp
 
 # Flask 앱 초기화
 app = Flask(__name__)
@@ -26,6 +27,7 @@ app.register_blueprint(food_bp)
 app.register_blueprint(raw_bp)
 app.register_blueprint(standard_bp)
 app.register_blueprint(ingredients_bp)
+app.register_blueprint(menu_bp)
 
 @app.route('/')
 def home():
