@@ -69,6 +69,32 @@ def create_menu():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+# 메뉴 단건 삭제 API
+@menu_bp.route('/<int:menu_id>', methods=['DELETE'])
+def delete_menu(menu_id):
+    """
+    특정 메뉴 삭제 API
+    - 해당 메뉴가 존재하지 않으면 404 반환
+    - 메뉴와 연결된 원재료(MenuIngredient)도 함께 삭제됨 (ON DELETE CASCADE 전제)
+    """
+    menu = Menu.query.get(menu_id)
+
+    if not menu:
+        return jsonify({'error': '해당 메뉴를 찾을 수 없습니다.'}), 404
+
+    try:
+        # 메뉴 삭제
+        db.session.delete(menu)
+        db.session.commit()
+
+        return jsonify({
+            'message': f'메뉴 "{menu.name}" (ID: {menu.id})가 성공적으로 삭제되었습니다.'
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'삭제 중 오류 발생: {str(e)}'}), 500
+
 # 메뉴 단건 조회
 @menu_bp.route('/<int:menu_id>', methods=['GET'])
 def get_menu(menu_id):
