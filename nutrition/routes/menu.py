@@ -80,7 +80,6 @@ def get_menu(menu_id):
     menu_data = serialize_model(menu)
 
     # 해당 메뉴의 원재료 조회
-
     ingredient_list = []
     for item in MenuIngredient.query.filter_by(menu_id=menu.id).all():
         ingredient_list.append({
