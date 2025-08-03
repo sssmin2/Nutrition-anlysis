@@ -95,6 +95,38 @@ def delete_menu(menu_id):
         db.session.rollback()
         return jsonify({'error': f'삭제 중 오류 발생: {str(e)}'}), 500
 
+# 메뉴 내 특정 원재료 삭제 API
+@menu_bp.route('/<int:menu_id>/ingredient/<string:food_code>', methods=['DELETE'])
+def delete_menu_ingredient(menu_id, food_code):
+    """
+    메뉴에서 특정 원재료 하나를 삭제
+    - menu_id : 삭제할 원재료가 속한 메뉴의 ID
+    - food_code : 삭제할 원재료의 코드
+    """
+    # 1) 메뉴 존재 확인
+    menu = Menu.query.get(menu_id)
+    if not menu:
+        return jsonify({'error': '메뉴를 찾을 수 없습니다.'}), 404
+
+    # 2) 메뉴-원재료 매핑 항목 조회
+    mi = MenuIngredient.query.filter_by(menu_id=menu_id, food_code=food_code).first()
+    if not mi:
+        return jsonify({'error': f'메뉴에 food_code="{food_code}" 원재료가 없습니다.'}), 404
+
+    # 3) (선택) 사용자에게 보여줄 재료명 조회
+    food_name = fetch_food_name(food_code) or food_code
+
+    # 4) 삭제 처리
+    try:
+        db.session.delete(mi)
+        db.session.commit()
+        return jsonify({
+            'message': f'메뉴 "{menu.name}"에서 원재료 "{food_name}"를 성공적으로 삭제했습니다.'
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'원재료 삭제 중 오류 발생: {str(e)}'}), 500
+
 # 메뉴 단건 조회
 @menu_bp.route('/<int:menu_id>', methods=['GET'])
 def get_menu(menu_id):
