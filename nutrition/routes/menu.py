@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from db_model.menu import Menu
 from db_model.menu_ingredient import MenuIngredient
-from db_model.raw_food_nutrition import RawFoodNutrition
+from utils.food_lookup import fetch_food_name
 from utils.nutrition_calculator import calculate_nutrition
 from utils.emphasis_rules import check_emphasis
 from utils.comment_generator import generate_comment, format_comment_by_sentence
@@ -80,23 +80,14 @@ def get_menu(menu_id):
     menu_data = serialize_model(menu)
 
     # 해당 메뉴의 원재료 조회
-    ingredients = MenuIngredient.query.filter_by(menu_id=menu.id).all()
 
     ingredient_list = []
-    for item in ingredients:
-        food_info = RawFoodNutrition.query.get(item.food_code)
-        if food_info:
-            ingredient_list.append({
-                'food_code': item.food_code,
-                'food_name': food_info.food_name,
-                'amount': item.amount
-            })
-        else:
-            ingredient_list.append({
-                'food_code': item.food_code,
-                'food_name': None,
-                'amount': item.amount
-            })
+    for item in MenuIngredient.query.filter_by(menu_id=menu.id).all():
+        ingredient_list.append({
+            'food_code': item.food_code,
+            'food_name': fetch_food_name(item.food_code),
+            'amount': item.amount
+        })
 
     # 원재료 정보 추가
     menu_data['ingredients'] = ingredient_list
@@ -169,12 +160,11 @@ def get_menu_comment(menu_id):
     nutrition = calculate_nutrition(menu)
 
     # 원재료 이름 리스트 추출
-    ingredient_names = []
-    for ing in menu.ingredients:
-        food = RawFoodNutrition.query.get(ing.food_code)
-        if food:
-            ingredient_names.append(food.food_name or food.food_code)
-
+    ingredient_names = [
+        fetch_food_name(ing.food_code) or ing.food_code
+        for ing in menu.ingredients
+    ]
+    
     # AI 코멘트 생성
     try:
         comment_raw = generate_comment(
